@@ -1,15 +1,15 @@
-def CONTAINER_NAME = "calculator"
 def ENV_NAME = getEnvName(env.BRANCH_NAME)
+def CONTAINER_NAME = "calculator-" +ENV_NAME
 def CONTAINER_TAG = getTag(env.BUILD_NUMBER, env.BRANCH_NAME)
 def HTTP_PORT = getHTTPPort(env.BRANCH_NAME)
-def EMAIL_RECIPIENTS = "your_email@gmail.com"
+def EMAIL_RECIPIENTS = "soniel1693@gmail.com" 
 
 
 node {
     try {
         stage('Initialize') {
-            def dockerHome = tool 'DockerLatest'
-            def mavenHome = tool 'MavenLatest'
+            def dockerHome = tool 'dockerlatest'
+            def mavenHome = tool 'mavenlatest'
             env.PATH = "${dockerHome}/bin:${mavenHome}/bin:${env.PATH}"
         }
 
@@ -19,12 +19,20 @@ node {
 
         stage('Build with test') {
 
-            sh "mvn clean install"
+            sh "mvn clean compile"
         }
 
         stage('Sonarqube Analysis') {
+             sh "mvn clean compile test-compile"
+             echo "Current branch: ${env.BRANCH_NAME}"
             withSonarQubeEnv('SonarQubeLocalServer') {
-                sh " mvn sonar:sonar -Dintegration-tests.skip=true -Dmaven.test.failure.ignore=true"
+                //sh " mvn sonar:sonar -Dintegration-tests.skip=true -Dmaven.test.failure.ignore=true"
+                sh """
+                mvn sonar:sonar \
+                -Dintegration-tests.skip=true \
+                -Dmaven.test.failure.ignore=true \
+                -Dsonar.branch.name=m2ch4_OK
+            """
             }
             timeout(time: 1, unit: 'MINUTES') {
                 def qg = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
@@ -43,13 +51,13 @@ node {
         }
 
         stage('Push to Docker Registry') {
-            withCredentials([usernamePassword(credentialsId: 'DockerhubCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+            withCredentials([usernamePassword(credentialsId: 'dockerhubcredential', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                 pushToImage(CONTAINER_NAME, CONTAINER_TAG, USERNAME, PASSWORD)
             }
         }
 
         stage('Run App') {
-            withCredentials([usernamePassword(credentialsId: 'DockerhubCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+            withCredentials([usernamePassword(credentialsId: 'dockerhubcredential', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                 runApp(CONTAINER_NAME, CONTAINER_TAG, USERNAME, HTTP_PORT, ENV_NAME)
 
             }
