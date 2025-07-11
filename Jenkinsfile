@@ -23,6 +23,7 @@ node {
         }
 
         stage('Sonarqube Analysis') {
+             sh "mvn clean compile test-compile"
             withSonarQubeEnv('SonarQubeLocalServer') {
                 sh " mvn sonar:sonar -Dintegration-tests.skip=true -Dmaven.test.failure.ignore=true"
             }
