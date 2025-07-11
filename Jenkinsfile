@@ -65,11 +65,26 @@ node {
 
 }
 
-def imagePrune(containerName) {
+/*def imagePrune(containerName) {
     try {
         sh "docker image prune -f"
         sh "docker stop $containerName"
     } catch (ignored) {
+    }
+}*/
+def imagePrune(containerName) {
+    try {
+        sh "docker stop $containerName || true"
+        echo "Container $containerName stopped (if it was running)"
+    } catch (Exception e) {
+        echo "Failed to stop container $containerName: ${e.getMessage()}"
+    }
+    
+    try {
+        sh "docker image prune -f"
+        echo "Docker images pruned successfully"
+    } catch (Exception e) {
+        echo "Failed to prune images: ${e.getMessage()}"
     }
 }
 
