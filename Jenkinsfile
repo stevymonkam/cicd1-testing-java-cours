@@ -2,7 +2,7 @@ def CONTAINER_NAME = "calculator"
 def ENV_NAME = getEnvName(env.BRANCH_NAME)
 def CONTAINER_TAG = getTag(env.BUILD_NUMBER, env.BRANCH_NAME)
 def HTTP_PORT = getHTTPPort(env.BRANCH_NAME)
-def EMAIL_RECIPIENTS = "your_email@gmail.com"
+def EMAIL_RECIPIENTS = "soniel1693@gmail.com"
 
 
 node {
