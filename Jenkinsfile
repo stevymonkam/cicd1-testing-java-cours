@@ -26,13 +26,8 @@ node {
              sh "mvn clean compile test-compile"
              echo "Current branch: ${env.BRANCH_NAME}"
             withSonarQubeEnv('SonarQubeLocalServer') {
-                //sh " mvn sonar:sonar -Dintegration-tests.skip=true -Dmaven.test.failure.ignore=true"
-                sh """
-                mvn sonar:sonar \
-                -Dintegration-tests.skip=true \
-                -Dmaven.test.failure.ignore=true \
-                -Dsonar.branch.name=m2ch4_OK
-            """
+                sh " mvn sonar:sonar -Dintegration-tests.skip=true -Dmaven.test.failure.ignore=true"
+               
             }
             timeout(time: 1, unit: 'MINUTES') {
                 def qg = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
