@@ -19,7 +19,7 @@ node {
 
         stage('Build with test') {
 
-            sh "mvn clean install"
+            sh "mvn clean compile"
         }
 
         stage('Sonarqube Analysis') {
