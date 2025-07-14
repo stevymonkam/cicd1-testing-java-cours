@@ -40,9 +40,9 @@ node {
             }*/
         }
 
-        stage("Image Prune") {
+       /* stage("Image Prune") {
             imagePrune(CONTAINER_NAME)
-        }
+        }*/
 
         stage('Image Build') {
             // Ajoute cette ligne AVANT le build
