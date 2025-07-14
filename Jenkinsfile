@@ -50,7 +50,6 @@ node {
 
         stage('Image Build') {
             // Ajoute cette ligne AVANT le build
-             sh "cp target/*.jar target/calculator.jar"
             imageBuild(CONTAINER_NAME, CONTAINER_TAG)
         }
 
