@@ -17,11 +17,7 @@ node {
             checkout scm
         }
 
-        stage('Build with test') {
-
-            sh "mvn clean compile"
-        }
-         stage('Maven Build') {
+        stage('Maven Build') {
         
          sh 'mvn clean package -DskipTests'
          sh "ls -l target/"
