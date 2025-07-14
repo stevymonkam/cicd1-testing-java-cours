@@ -21,6 +21,11 @@ node {
 
             sh "mvn clean compile"
         }
+         stage('Maven Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
 
         stage('Sonarqube Analysis') {
              sh "mvn clean compile test-compile"
