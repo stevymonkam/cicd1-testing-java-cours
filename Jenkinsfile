@@ -76,7 +76,7 @@ node {
     } catch (ignored) {
     }
 }*/
-def imagePrune(containerName) {
+/*def imagePrune(containerName) {
     try {
         sh "docker stop $containerName || true"
         echo "Container $containerName stopped (if it was running)"
@@ -90,7 +90,7 @@ def imagePrune(containerName) {
     } catch (Exception e) {
         echo "Failed to prune images: ${e.getMessage()}"
     }
-}
+}*/
 
 def imageBuild(containerName, tag) {
     sh "docker build -t back1 ."
