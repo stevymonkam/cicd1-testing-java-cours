@@ -24,6 +24,8 @@ node {
          stage('Maven Build') {
         
          sh 'mvn clean package -DskipTests'
+         sh "ls -l target/"
+
         
         }
 
