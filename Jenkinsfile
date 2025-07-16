@@ -46,6 +46,7 @@ node {
 
         stage('Image Build') {
             // Ajoute cette ligne AVANT le build
+            sh 'pwd && ls -l && ls -l target' // debug utile
             imageBuild(CONTAINER_NAME, CONTAINER_TAG)
         }
 
