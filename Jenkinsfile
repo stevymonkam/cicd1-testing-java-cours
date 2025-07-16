@@ -26,7 +26,7 @@ node {
         }
 
         stage('Sonarqube Analysis') {
-             //sh "mvn clean compile test-compile"
+             sh "mvn clean compile test-compile"
              echo "Current branch: ${env.BRANCH_NAME}"
             withSonarQubeEnv('SonarQubeLocalServer') {
                 sh " mvn sonar:sonar -Dintegration-tests.skip=true -Dmaven.test.failure.ignore=true"
@@ -94,8 +94,8 @@ node {
 }*/
 
 def imageBuild(containerName, tag) {
-    sh "docker build -t back1 ."
-    //sh "docker build -t $containerName:$tag  -t $containerName --pull --no-cache ."
+    //sh "docker build -t back1 ."
+    sh "docker build -t $containerName:$tag  -t $containerName --pull --no-cache ."
     echo "Image build complete"
 }
 
