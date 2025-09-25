@@ -1,0 +1,13 @@
+tech\zerofiltre\testing\calcul\domain\ConversionCalculatorTest$TemperatureTests.class
+tech\zerofiltre\testing\calcul\service\SolutionFormatterTest.class
+tech\zerofiltre\testing\calcul\controller\CalculatorControllerSIT.class
+tech\zerofiltre\testing\calcul\domain\DoubleCalculatorTest.class
+tech\zerofiltre\testing\calcul\domain\CalculatorTest.class
+tech\zerofiltre\testing\calcul\domain\StatisticsCalculatorTest.class
+tech\zerofiltre\testing\calcul\service\CalculatorServiceTest.class
+tech\zerofiltre\testing\calcul\e2e\MultiplicationJourneyE2E.class
+tech\zerofiltre\testing\calcul\domain\LoggingExtension.class
+tech\zerofiltre\testing\calcul\domain\ConversionCalculatorTest.class
+tech\zerofiltre\testing\calcul\service\BatchCalculatorServiceTest.class
+tech\zerofiltre\testing\calcul\service\CalculatorServiceIT.class
+tech\zerofiltre\testing\calcul\service\BatchCalculatorServiceTest$1.class

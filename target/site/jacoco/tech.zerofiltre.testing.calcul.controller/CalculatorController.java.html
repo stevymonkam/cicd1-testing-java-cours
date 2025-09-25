@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="it"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CalculatorController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">calculator</a> &gt; <a href="index.source.html" class="el_package">tech.zerofiltre.testing.calcul.controller</a> &gt; <span class="el_source">CalculatorController.java</span></div><h1>CalculatorController.java</h1><pre class="source lang-java linenums">package tech.zerofiltre.testing.calcul.controller;
+
+import javax.inject.Inject;
+import javax.validation.Valid;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+
+import tech.zerofiltre.testing.calcul.domain.model.Calculation;
+import tech.zerofiltre.testing.calcul.domain.model.CalculationModel;
+import tech.zerofiltre.testing.calcul.domain.model.CalculationType;
+import tech.zerofiltre.testing.calcul.service.CalculatorService;
+
+@Controller
+<span class="nc" id="L18">public class CalculatorController {</span>
+
+	public static final String CALCULATOR_TEMPLATE = &quot;calculator&quot;;
+
+	@Inject
+	CalculatorService calculatorService;
+
+	@GetMapping(&quot;/&quot;)
+	public String index(Calculation calculation) {
+<span class="nc" id="L27">		return &quot;redirect:/calculator&quot;;</span>
+	}
+
+	@GetMapping(&quot;/calculator&quot;)
+	public String root(Calculation calculation) {
+<span class="nc" id="L32">		return CALCULATOR_TEMPLATE; // cf. resources/templates/calculator.html</span>
+	}
+
+	@PostMapping(&quot;/calculator&quot;)
+	public String calculate(@Valid Calculation calculation, BindingResult bindingResult, Model model) {
+
+<span class="nc" id="L38">		final CalculationType type = CalculationType.valueOf(calculation.getCalculationType());</span>
+<span class="nc" id="L39">		final CalculationModel calculationModel = new CalculationModel(</span>
+				type,
+<span class="nc" id="L41">				calculation.getLeftArgument(),</span>
+<span class="nc" id="L42">				calculation.getRightArgument());</span>
+
+<span class="nc" id="L44">		final CalculationModel response = calculatorService.calculate(calculationModel);</span>
+
+<span class="nc" id="L46">		model.addAttribute(&quot;response&quot;, response);</span>
+<span class="nc" id="L47">		return CALCULATOR_TEMPLATE; // cf. resources/templates/calculator.html</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

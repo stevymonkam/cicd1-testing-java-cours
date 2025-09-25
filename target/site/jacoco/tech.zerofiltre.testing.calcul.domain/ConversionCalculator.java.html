@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="it"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConversionCalculator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">calculator</a> &gt; <a href="index.source.html" class="el_package">tech.zerofiltre.testing.calcul.domain</a> &gt; <span class="el_source">ConversionCalculator.java</span></div><h1>ConversionCalculator.java</h1><pre class="source lang-java linenums">package tech.zerofiltre.testing.calcul.domain;
+
+<span class="fc" id="L3">public class ConversionCalculator {</span>
+
+	// constantes pour la conversion des températures
+	private static final double BASE_FAHRENHEIT = 32.0;
+	private static final double CELSIUS_FAHRENHEIT_CONVERSION_FACTOR = 9.0 / 5.0;
+
+	// constantes pour la conversion des volumes
+	private static final double LITRE_TO_GALLON_MULTIPLIER = 0.264172;
+
+	// Exposant pour le calcul d'une aire de disque
+	private static final double POWER_OF_RADIUS = 2.0;
+
+	/**
+	 * Convertir centigrade en fahrenheit.
+	 * 
+	 * @param celsiusTemperature à convertir
+	 * @return fahrenheit temperature.
+	 */
+	public final Double celsiusToFahrenheit(Double celsiusTemperature) {
+<span class="fc" id="L22">		return celsiusTemperature * CELSIUS_FAHRENHEIT_CONVERSION_FACTOR + BASE_FAHRENHEIT;</span>
+	}
+
+	/**
+	 * Convertir fahrenheit en centigrade
+	 * 
+	 * @param fahrenheitTemperature à convertir
+	 * @return Centigrade temperature
+	 */
+	public final Double fahrenheitToCelsius(Double fahrenheitTemperature) {
+<span class="fc" id="L32">		return (fahrenheitTemperature - BASE_FAHRENHEIT) * CELSIUS_FAHRENHEIT_CONVERSION_FACTOR;</span>
+	}
+
+	/**
+	 * Convertir a volume en litres en gallons.
+	 * 
+	 * @param litreVolume à convertir
+	 * @return volume en gallons
+	 */
+	public final Double litresToGallons(Double litreVolume) {
+<span class="fc" id="L42">		return Math.ceil(litreVolume * LITRE_TO_GALLON_MULTIPLIER);</span>
+	}
+
+	/**
+	 * Convertir un rayon en aire de disque
+	 * 
+	 * @param radius du disque
+	 * @return aire du disque
+	 */
+	public final Double radiusToAreaOfCircle(Double radius) {
+<span class="fc" id="L52">		return Math.PI * Math.pow(radius, POWER_OF_RADIUS);</span>
+
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

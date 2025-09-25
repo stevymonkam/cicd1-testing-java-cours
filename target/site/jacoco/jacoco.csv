@@ -1,0 +1,13 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+calculator,tech.zerofiltre.testing.calcul.service,BatchCalculatorServiceImpl,0,20,0,0,0,5,0,3,0,3
+calculator,tech.zerofiltre.testing.calcul.service,CalculatorServiceImpl,5,85,1,4,1,20,1,5,0,2
+calculator,tech.zerofiltre.testing.calcul.service,BatchCalculationFileServiceImpl,9,0,0,0,2,0,2,0,2,0
+calculator,tech.zerofiltre.testing.calcul.service,SolutionFormatterImpl,0,14,0,0,0,2,0,2,0,2
+calculator,tech.zerofiltre.testing.calcul.domain,StatisticsCalculator,0,23,0,0,0,6,0,2,0,2
+calculator,tech.zerofiltre.testing.calcul.domain,ConversionCalculator,0,34,0,0,0,5,0,5,0,5
+calculator,tech.zerofiltre.testing.calcul.domain,Calculator,27,78,2,8,7,19,6,11,4,8
+calculator,tech.zerofiltre.testing.calcul.controller,CalculatorController,34,0,0,0,10,0,4,0,4,0
+calculator,tech.zerofiltre.testing.calcul,CalculatorApp,8,0,0,0,3,0,2,0,2,0
+calculator,tech.zerofiltre.testing.calcul.domain.model,CalculationModel,12,80,0,0,6,25,3,10,3,10
+calculator,tech.zerofiltre.testing.calcul.domain.model,CalculationType,7,70,2,4,2,11,2,5,0,2
+calculator,tech.zerofiltre.testing.calcul.domain.model,Calculation,24,0,0,0,10,0,7,0,7,0

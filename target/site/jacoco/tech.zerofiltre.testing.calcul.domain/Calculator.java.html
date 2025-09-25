@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="it"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Calculator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">calculator</a> &gt; <a href="index.source.html" class="el_package">tech.zerofiltre.testing.calcul.domain</a> &gt; <span class="el_source">Calculator.java</span></div><h1>Calculator.java</h1><pre class="source lang-java linenums">package tech.zerofiltre.testing.calcul.domain;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import javax.inject.Named;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@Named
+<span class="fc" id="L11">public class Calculator {</span>
+
+<span class="fc" id="L13">	Logger logger = LoggerFactory.getLogger(Calculator.class);</span>
+
+	public int add(int a, int b) {
+<span class="fc" id="L16">		return a + b;</span>
+	}
+
+	public int sub(int a, int b) {
+<span class="fc" id="L20">		return a - b;</span>
+	}
+
+	public int multiply(int a, int b) {
+<span class="fc" id="L24">		return a * b;</span>
+	}
+
+	public int divide(int a, int b) {
+<span class="fc" id="L28">		return a / b;</span>
+	}
+
+	public double add(double a, double b) {
+<span class="nc" id="L32">		return a + b;</span>
+	}
+
+	public double sub(double a, double b) {
+<span class="nc" id="L36">		return a - b;</span>
+	}
+
+	public double multiply(double a, double b) {
+<span class="nc" id="L40">		return a * b;</span>
+	}
+
+	public double divide(double a, double b) {
+<span class="nc" id="L44">		return a / b;</span>
+	}
+
+	public int fact(int a) {
+<span class="pc bpc" id="L48" title="2 of 4 branches missed.">		if (a &lt; 0 || a &gt; 12) {</span>
+<span class="nc" id="L49">			throw new IllegalArgumentException(&quot;Doit être compris entre 0 et 12.&quot;);</span>
+		}
+<span class="fc bfc" id="L51" title="All 2 branches covered.">		if (a &lt;= 1) {</span>
+<span class="fc" id="L52">			return a;</span>
+		}
+<span class="fc" id="L54">		return a * fact(a - 1);</span>
+	}
+
+	public void longCalculation() {
+		try {
+<span class="fc" id="L59">			Thread.sleep(500);</span>
+<span class="nc" id="L60">		} catch (final InterruptedException e) {</span>
+<span class="nc" id="L61">			logger.debug(&quot;Thread has been interrupted&quot;, e);</span>
+<span class="fc" id="L62">		}</span>
+<span class="fc" id="L63">	}</span>
+
+	public Set&lt;Integer&gt; digitsSet(int number) {
+<span class="fc" id="L66">		final Set&lt;Integer&gt; integers = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L67">		final String numberString = String.valueOf(number);</span>
+
+<span class="fc bfc" id="L69" title="All 2 branches covered.">		for (int i = 0; i &lt; numberString.length(); i++) {</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">			if (numberString.charAt(i) != '-') {</span>
+<span class="fc" id="L71">				integers.add(Integer.parseInt(numberString, i, i + 1, 10));</span>
+			}
+		}
+<span class="fc" id="L74">		return integers;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
