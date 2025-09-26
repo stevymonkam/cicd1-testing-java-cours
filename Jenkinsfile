@@ -18,10 +18,9 @@ node {
         }
 
         stage('Build with test') {
-            sh "mvn -X clean compile 2>&1 | grep -i compiler"
-            echo $JAVA_HOME
-            sh "java -version"
-            sh "javac -version"
+            //sh "mvn -X clean compile 2>&1 | grep -i compiler"
+            
+           
             sh "mvn clean compile -Dmaven.compiler.version=3.11.0"
         }
 
