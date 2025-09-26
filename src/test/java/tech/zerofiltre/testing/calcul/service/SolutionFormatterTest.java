@@ -25,7 +25,9 @@ class SolutionFormatterTest {
 
     // THEN
     //assertThat(result).isEqualTo("1 234 567 890");
-    assertEquals("1 234 567 890", result);
+    //assertEquals("1 234 567 890", result);
+    //assertEquals("1 234 567 890", result); 
+    assertEquals("1\u00A0234\u00A0567\u00A0890", result); // Espaces insécables explicites
   }
 
 }
