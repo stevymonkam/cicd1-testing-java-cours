@@ -23,10 +23,16 @@ node {
            
             sh "mvn clean compile"
         }
+        stage('Build test') {
+            //sh "mvn -X clean compile 2>&1 | grep -i compiler"
+            
+           
+            sh "mvn clean test -Djacoco.skip=true"
+        }
 
         stage('Sonarqube Analysis') {
              //sh "mvn clean test"
-             sh "mvn clean test -Djacoco.skip=true"
+             //sh "mvn clean test -Djacoco.skip=true"
              echo "Current branch: ${env.BRANCH_NAME}"
             withSonarQubeEnv('SonarQubeLocalServer') {
              sh "mvn sonar:sonar -s .m2/settings.xml \"-Dsonar.projectKey=tech.zerofiltre.testing:calculator\" \"-Dsonar.host.url=http://109.176.198.187:9000\" \"-Dsonar.token=squ_560168e21429ecde3798ee92bcfd47b027c3994c\""
