@@ -21,7 +21,7 @@ node {
             //sh "mvn -X clean compile 2>&1 | grep -i compiler"
             
            
-            sh "mvn clean compile -Dmaven.compiler.version=3.11.0"
+            sh "mvn clean compile"
         }
 
         stage('Sonarqube Analysis') {
