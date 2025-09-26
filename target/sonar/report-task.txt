@@ -2,5 +2,5 @@ projectKey=tech.zerofiltre.testing:calculator
 serverUrl=http://109.176.198.187:9000
 serverVersion=25.6.0.109173
 dashboardUrl=http://109.176.198.187:9000/dashboard?id=tech.zerofiltre.testing%3Acalculator
-ceTaskId=1105e22c-c18c-41d5-8356-e4fcee1a3bf9
-ceTaskUrl=http://109.176.198.187:9000/api/ce/task?id=1105e22c-c18c-41d5-8356-e4fcee1a3bf9
+ceTaskId=e22ba42d-3395-4c09-9bbc-1faecbce32c3
+ceTaskUrl=http://109.176.198.187:9000/api/ce/task?id=e22ba42d-3395-4c09-9bbc-1faecbce32c3
