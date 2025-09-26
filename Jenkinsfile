@@ -19,7 +19,7 @@ node {
 
         stage('Build with test') {
 
-            sh "mvn clean compile"
+            sh "mvn clean compile -Dmaven.compiler.version=3.11.0"
         }
 
         stage('Sonarqube Analysis') {
