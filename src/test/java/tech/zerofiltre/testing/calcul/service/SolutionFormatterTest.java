@@ -3,6 +3,8 @@ package tech.zerofiltre.testing.calcul.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.nio.charset.StandardCharsets;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,9 +27,7 @@ class SolutionFormatterTest {
 
     // THEN
     //assertThat(result).isEqualTo("1 234 567 890");
-    //assertEquals("1 234 567 890", result);
-    //assertEquals("1 234 567 890", result); 
-    assertEquals("1\u00A0234\u00A0567\u00A0890", result); // Espaces insécables explicites
+    assertThat(result).isEqualTo("1 234 567 890");
   }
 
 }
