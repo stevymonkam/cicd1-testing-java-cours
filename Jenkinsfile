@@ -22,6 +22,12 @@ node {
             
            
             sh "mvn clean compile"
+
+              sh '''
+                        echo "Java version par défaut:"
+                        java -version
+                        echo ""
+                    '''
         }
         stage('Build test') {
             //sh "mvn -X clean compile 2>&1 | grep -i compiler"
