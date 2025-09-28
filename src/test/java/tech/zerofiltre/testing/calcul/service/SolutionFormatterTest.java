@@ -1,10 +1,5 @@
 package tech.zerofiltre.testing.calcul.service;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.nio.charset.StandardCharsets;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,8 +21,8 @@ class SolutionFormatterTest {
     final String result = solutionFormatter.format(number);
 
     // THEN
-    //assertThat(result).isEqualTo("1 234 567 890");
-    //assertThat(result).isEqualTo("1 234 567 890");
+     String normalizedResult = result.replaceAll("\\u00A0", " "); // Remplace espaces insécables par espaces normaux
+     assertThat(normalizedResult).isEqualTo("1 234 567 890");
   }
 
 }
