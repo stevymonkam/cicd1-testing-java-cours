@@ -49,7 +49,7 @@ node {
              echo "Current branch: ${env.BRANCH_NAME}"
             withSonarQubeEnv('SonarQubeLocalServer') {
 
-            sh " mvn sonar:sonar -Dintegration-tests.skip=true -Dmaven.test.failure.ignore=true"
+            sh " mvn sonar:sonar -Dintegration-tests.skip=true -Dmaven.test.failure.ignore=true \"-Dsonar.projectKey=tech.zerofiltre.testing:calculator\" \"-Dsonar.host.url=http://109.176.198.187:9000\""
             // sh "mvn sonar:sonar -s .m2/settings.xml \"-Dsonar.projectKey=tech.zerofiltre.testing:calculator\" \"-Dsonar.host.url=http://109.176.198.187:9000\" \"-Dsonar.token=squ_560168e21429ecde3798ee92bcfd47b027c3994c\""
                
             }
