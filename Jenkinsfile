@@ -10,11 +10,20 @@ node {
         stage('Initialize') {
             def dockerHome = tool 'dockerlatest'
             def mavenHome = tool 'mavenlatest'
-            env.PATH = "${dockerHome}/bin:${mavenHome}/bin:${env.PATH}"
+            def javaHome = tool 'Java 11'  // Force l'utilisation de Java 11
+           
+ env.JAVA_HOME = javaHome
+            env.PATH = "${javaHome}/bin:${dockerHome}/bin:${mavenHome}/bin:${env.PATH}"
         }
 
         stage('Checkout') {
             checkout scm
+        }
+
+         stage('Verify Java Version') {
+            sh 'java -version'
+            sh 'echo "JAVA_HOME: $JAVA_HOME"'
+            sh 'which java'
         }
 
         stage('Build with test') {
