@@ -25,9 +25,7 @@ node {
         }
         stage('Build test') {
             //sh "mvn -X clean compile 2>&1 | grep -i compiler"
-            
-           
-            sh "mvn clean test -Djacoco.skip=true"
+            sh "mvn test"
         }
 
         stage('Sonarqube Analysis') {
