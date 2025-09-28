@@ -21,8 +21,8 @@ class SolutionFormatterTest {
     final String result = solutionFormatter.format(number);
 
     // THEN
-     //String normalizedResult = result.replaceAll("\\u00A0", " "); // Remplace espaces insécables par espaces normaux
-     //assertThat(normalizedResult).isEqualTo("1 234 567 890");
+     String normalizedResult = result.replaceAll("\\u00A0", " "); // Remplace espaces insécables par espaces normaux
+     assertThat(normalizedResult).isEqualTo("1 234 567 890");
   }
 
 }
