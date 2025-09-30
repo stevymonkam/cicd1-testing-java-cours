@@ -58,7 +58,7 @@ node {
         '''*/
 
              //sh " mvn sonar:sonar -Dintegration-tests.skip=true -Dmaven.test.failure.ignore=true \"-Dsonar.projectKey=tech.zerofiltre.testing:calculator\" \"-Dsonar.host.url=http://109.176.198.187:9000\""
-             sh "mvn sonar:sonar -s .m2/settings.xml \"-Dsonar.projectKey=tech.zerofiltre.testing:calculator\" \"-Dsonar.host.url=http://109.176.198.187:9000\""
+             sh "mvn sonar:sonar -s .m2/settings.xml \"-Dsonar.projectKey=tech.zerofiltre.testing:calculator\""
                
             }
             timeout(time: 1, unit: 'MINUTES') {
