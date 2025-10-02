@@ -72,7 +72,10 @@ node {
         /*stage("Image Prune") {
             imagePrune(CONTAINER_NAME)
         }*/
-
+         stage('Build and package') {
+            //sh "mvn -X clean compile 2>&1 | grep -i compiler"
+            sh "mvn clean package"
+        }
         stage('Image Build') {
             imageBuild(CONTAINER_NAME, CONTAINER_TAG)
         }
