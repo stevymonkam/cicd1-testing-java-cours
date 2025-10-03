@@ -3,7 +3,7 @@ spring:
    # url: jdbc:mysql://localhost:3306/calculator?serverTimezone=UTC
     #username: root
     #password: 
-  url: jdbc:mysql://localhost:3306/calculator?serverTimezone=UTC
+  url: jdbc:mysql://mysqldb:3306/calculator?serverTimezone=UTC
   username: stevy
   password: manounou
 
