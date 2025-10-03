@@ -69,9 +69,9 @@ node {
             }
         }
 
-        /*stage("Image Prune") {
+        stage("Image Prune") {
             imagePrune(CONTAINER_NAME)
-        }*/
+        }
          stage('Build and package') {
             //sh "mvn -X clean compile 2>&1 | grep -i compiler"
             sh "mvn clean package"
@@ -102,9 +102,11 @@ node {
 
 def imagePrune(containerName) {
     try {
-        sh "docker image prune -f"
         sh "docker stop $containerName"
+        sh "docker rm -f $containerName"
+        sh "docker image prune -f"
     } catch (ignored) {
+        echo "Container $containerName not found or already stopped"
     }
 }
 
