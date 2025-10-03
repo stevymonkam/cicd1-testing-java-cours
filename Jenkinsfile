@@ -122,7 +122,7 @@ def pushToImage(containerName, tag, dockerUser, dockerPassword) {
 
 def runApp(containerName, tag, dockerHubUser, httpPort, envName) {
     sh "docker pull $dockerHubUser/$containerName:$tag"
-    sh "docker run --env SPRING_ACTIVE_PROFILES=$envName -d -p $httpPort:$httpPort --name $containerName $dockerHubUser/$containerName:$tag"
+    sh "docker run --network springmysql-net --env SPRING_ACTIVE_PROFILES=$envName -d -p $httpPort:$httpPort --name $containerName $dockerHubUser/$containerName:$tag"
  // sh "docker run --rm --env SPRING_ACTIVE_PROFILES=$envName -d -p $httpPort:$httpPort --name $containerName $dockerHubUser/$containerName:$tag"
     echo "Application started on port: ${httpPort} (http)"
 }
