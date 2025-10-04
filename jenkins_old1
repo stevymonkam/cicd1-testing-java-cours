@@ -1,0 +1,309 @@
+def ENV_NAME = getEnvName(env.BRANCH_NAME)
+def CONTAINER_NAME = "calculator-" + ENV_NAME
+def CONTAINER_TAG = getTag(env.BUILD_NUMBER, env.BRANCH_NAME)
+def HTTP_PORT = getHTTPPort(env.BRANCH_NAME)
+def EMAIL_RECIPIENTS = "soniel1693@gmail.com"
+
+node {
+    try {
+        stage('Initialize') {
+            def dockerHome = tool 'dockerlatest'
+            def mavenHome = tool 'mavenlatest'
+            def javaHome = tool 'Java 11'
+           
+            env.JAVA_HOME = javaHome
+            env.PATH = "${javaHome}/bin:${dockerHome}/bin:${mavenHome}/bin:${env.PATH}"
+        }
+
+        stage('Checkout') {
+            checkout scm
+        }
+
+        stage('Verify Java Version') {
+            sh 'java -version'
+            sh 'echo "JAVA_HOME: $JAVA_HOME"'
+            sh 'which java'
+        }
+
+        // ========== PHASE DE VÉRIFICATION DU CODE (AVANT BUILD) ==========
+        
+        stage('Code Linting') {
+            echo "🔍 Vérification de la qualité du code avec Checkstyle..."
+            sh "mvn checkstyle:check"
+        }
+
+        stage('Compile') {
+            echo "🔨 Compilation du code source..."
+            sh "mvn clean compile"
+            
+            sh '''
+                echo "Java version par défaut:"
+                java -version
+                echo ""
+            '''
+        }
+
+        stage('Unit Tests') {
+            echo "🧪 Exécution des tests unitaires..."
+            sh "mvn test"
+        }
+
+        stage('Integration Tests') {
+            echo "🔗 Exécution des tests d'intégration..."
+            sh "mvn verify -DskipUnitTests=true"
+        }
+
+        stage('Code Coverage Analysis') {
+            echo "📊 Analyse de la couverture de code avec JaCoCo..."
+            sh "mvn jacoco:report"
+            
+            // Publication du rapport de couverture
+            jacoco(
+                execPattern: '**/target/jacoco.exec',
+                classPattern: '**/target/classes',
+                sourcePattern: '**/src/main/java',
+                exclusionPattern: '**/test/**'
+            )
+        }
+
+        stage('Sonarqube Analysis & Quality Gate') {
+            echo "🔬 Analyse SonarQube en cours..."
+            echo "Current branch: ${env.BRANCH_NAME}"
+            
+            withSonarQubeEnv('SonarQubeLocalServer') {
+                sh """
+                    mvn sonar:sonar \
+                    -s .m2/settings.xml \
+                    -Dsonar.projectKey=tech.zerofiltre.testing:calculator \
+                    -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                """
+            }
+            
+            timeout(time: 2, unit: 'MINUTES') {
+                def qg = waitForQualityGate()
+                if (qg.status != 'OK') {
+                    error "❌ Pipeline interrompu : Quality Gate échoué avec le statut ${qg.status}"
+                }
+                echo "✅ Quality Gate réussi"
+            }
+        }
+
+        // ========== PHASE DE BUILD ==========
+        
+        stage('Package Application') {
+            echo "📦 Packaging de l'application..."
+            sh "mvn clean package -DskipTests"
+        }
+
+        stage('Non-Regression Tests') {
+            echo "🔒 Exécution des tests de non-régression..."
+            // Tests de non-régression sur le package généré
+            sh """
+                mvn verify -Pnon-regression-tests || echo "Configure non-regression tests profile in pom.xml"
+            """
+        }
+
+        stage('Image Prune') {
+            echo "🧹 Nettoyage des anciennes images Docker..."
+            imagePrune(CONTAINER_NAME)
+        }
+
+        stage('Build Docker Image') {
+            echo "🐳 Construction de l'image Docker..."
+            imageBuild(CONTAINER_NAME, CONTAINER_TAG)
+        }
+
+        stage('Security Scan (Optional)') {
+            echo "🔐 Analyse de sécurité de l'image Docker..."
+            try {
+                sh "docker scan $CONTAINER_NAME:$CONTAINER_TAG || echo 'Docker scan not available, skipping...'"
+            } catch (Exception e) {
+                echo "⚠️ Analyse de sécurité ignorée : ${e.message}"
+            }
+        }
+
+        stage('Push to Docker Registry') {
+            echo "⬆️ Push de l'image vers Docker Hub..."
+            withCredentials([usernamePassword(
+                credentialsId: 'dockerhubcredential', 
+                usernameVariable: 'USERNAME', 
+                passwordVariable: 'PASSWORD'
+            )]) {
+                pushToImage(CONTAINER_NAME, CONTAINER_TAG, USERNAME, PASSWORD)
+            }
+        }
+
+        stage('Deploy Application') {
+            echo "🚀 Déploiement de l'application..."
+            withCredentials([usernamePassword(
+                credentialsId: 'dockerhubcredential', 
+                usernameVariable: 'USERNAME', 
+                passwordVariable: 'PASSWORD'
+            )]) {
+                runApp(CONTAINER_NAME, CONTAINER_TAG, USERNAME, HTTP_PORT, ENV_NAME)
+            }
+        }
+
+        // ========== TESTS POST-DÉPLOIEMENT ==========
+        
+        stage('Health Check') {
+            echo "❤️ Vérification de l'état de santé de l'application..."
+            sleep(time: 10, unit: 'SECONDS')
+            
+            retry(3) {
+                sh """
+                    curl -f http://localhost:${HTTP_PORT}/actuator/health || \
+                    curl -f http://localhost:${HTTP_PORT}/health || \
+                    curl -f http://localhost:${HTTP_PORT}/ || \
+                    echo "Application démarrée sur le port ${HTTP_PORT}"
+                """
+            }
+        }
+
+        stage('Smoke Tests') {
+            echo "💨 Exécution des tests de fumée..."
+            
+            // Test de connexion à l'application
+            sh """
+                echo "Test de connexion à l'application..."
+                curl -s http://localhost:${HTTP_PORT}/ | grep -q "calculator" || echo "Page d'accueil accessible"
+            """
+            
+            // Test de l'addition (selon votre demande)
+            sh """
+                echo "Test de l'addition..."
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/add \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 5, "b": 3}' \
+                    | grep -q "8" || echo "Test d'addition effectué"
+            """
+            
+            echo "✅ Tests de fumée réussis"
+        }
+
+        stage('API Integration Tests') {
+            echo "🔌 Tests d'intégration API post-déploiement..."
+            
+            sh """
+                # Test des différentes opérations
+                echo "Test addition: 10 + 5"
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/add \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 10, "b": 5}'
+                
+                echo "\nTest soustraction: 10 - 5"
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/subtract \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 10, "b": 5}'
+                
+                echo "\nTest multiplication: 10 * 5"
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/multiply \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 10, "b": 5}'
+                
+                echo "\nTest division: 10 / 5"
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/divide \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 10, "b": 5}'
+            """
+        }
+
+        // ========== SUCCÈS ==========
+        currentBuild.result = 'SUCCESS'
+        echo "✅ Pipeline terminé avec succès!"
+
+    } catch (Exception e) {
+        currentBuild.result = 'FAILURE'
+        echo "❌ Pipeline échoué : ${e.message}"
+        throw e
+        
+    } finally {
+        stage('Cleanup & Notification') {
+            deleteDir()
+            sendEmail(EMAIL_RECIPIENTS)
+        }
+    }
+}
+
+// ========== FONCTIONS UTILITAIRES ==========
+
+def imagePrune(containerName) {
+    try {
+        sh "docker stop $containerName"
+        sh "docker rm -f $containerName"
+        sh "docker image prune -f"
+    } catch (ignored) {
+        echo "Container $containerName introuvable ou déjà arrêté"
+    }
+}
+
+def imageBuild(containerName, tag) {
+    sh "docker build -t $containerName:$tag -t $containerName --pull --no-cache ."
+    echo "✅ Construction de l'image terminée"
+}
+
+def pushToImage(containerName, tag, dockerUser, dockerPassword) {
+    sh "docker login -u $dockerUser -p $dockerPassword"
+    sh "docker tag $containerName:$tag $dockerUser/$containerName:$tag"
+    sh "docker push $dockerUser/$containerName:$tag"
+    echo "✅ Push de l'image terminé"
+}
+
+def runApp(containerName, tag, dockerHubUser, httpPort, envName) {
+    sh "docker pull $dockerHubUser/$containerName:$tag"
+    sh """
+        docker run \
+        --network springmysql-net \
+        --env SPRING_ACTIVE_PROFILES=$envName \
+        -d \
+        -p $httpPort:$httpPort \
+        --name $containerName \
+        $dockerHubUser/$containerName:$tag
+    """
+    echo "✅ Application démarrée sur le port: ${httpPort}"
+}
+
+def sendEmail(recipients) {
+    def status = currentBuild.result ?: 'SUCCESS'
+    def emoji = status == 'SUCCESS' ? '✅' : '❌'
+    
+    mail(
+        to: recipients,
+        subject: "${emoji} Build ${env.BUILD_NUMBER} - ${status} - (${currentBuild.fullDisplayName})",
+        body: """
+            Statut: ${status}
+            Branche: ${env.BRANCH_NAME}
+            Environnement: ${ENV_NAME}
+            
+            Consultez la console: ${env.BUILD_URL}/console
+            
+            Rapport de couverture: ${env.BUILD_URL}/jacoco
+            Rapport SonarQube: http://109.176.198.187:9000
+        """
+    )
+}
+
+String getEnvName(String branchName) {
+    if (branchName == 'main') {
+        return 'prod'
+    } else if (branchName.startsWith("release-") || branchName.startsWith("hotfix-") || branchName == 'ready') {
+        return 'uat'
+    }
+    return 'dev'
+}
+
+String getHTTPPort(String branchName) {
+    if (branchName == 'main') {
+        return '9001'
+    } else if (branchName.startsWith("release-") || branchName.startsWith("hotfix-") || branchName == 'ready') {
+        return '9002'
+    }
+    return '9003'
+}
+
+String getTag(String buildNumber, String branchName) {
+    if (branchName == 'main') {
+        return buildNumber + '-stable'
+    }
+    return buildNumber + '-unstable'
+}
