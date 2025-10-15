@@ -38,6 +38,50 @@ node {
                         echo ""
                     '''
         }
+
+stage('Code Linting') {
+    steps {
+        script {
+            echo "🔍 Vérification de la qualité du code avec Checkstyle..."
+            
+            def checkstyleStatus = sh(
+                script: 'mvn checkstyle:check',
+                returnStatus: true
+            )
+            
+            sh 'mvn checkstyle:checkstyle || true'
+            
+            archiveArtifacts artifacts: 'target/site/checkstyle.html', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'target/checkstyle-result.xml', allowEmptyArchive: true
+            
+            def violations = sh(
+                script: "grep -oP '\\d+(?= errors reported)' target/checkstyle-result.xml 2>/dev/null || echo 0",
+                returnStdout: true
+            ).trim()
+            
+            echo "📊 Violations détectées: ${violations}"
+            
+            def checkstyleReport = """
+                Violations: ${violations}
+                Rapport HTML: ${env.BUILD_URL}artifact/target/site/checkstyle.html
+                Rapport XML: ${env.BUILD_URL}artifact/target/checkstyle-result.xml
+            """
+            
+            if (env.CHANGE_ID && checkstyleStatus != 0) {
+                echo "❌ PULL REQUEST BLOQUÉE"
+                echo "📋 Rapport disponible: ${env.BUILD_URL}artifact/target/site/checkstyle.html"
+                
+                sendEmailcheckstyle('soniel1693@gmail.com', checkstyleReport)
+                
+                error("Pull Request bloquée: ${violations} violations Checkstyle")
+            }
+            
+            echo "ℹ️ Pipeline continue - Rapport Checkstyle disponible dans les artifacts"
+            
+            sendEmailcheckstyle('soniel1693@gmail.com', checkstyleReport)
+        }
+    }
+}
         stage('Build test') {
             //sh "mvn -X clean compile 2>&1 | grep -i compiler"
             sh "mvn test"
@@ -160,4 +204,35 @@ String getTag(String buildNumber, String branchName) {
         return buildNumber + '-unstable'
     }
     return buildNumber + '-stable'
+}
+
+
+def sendEmailcheckstyle(recipients, checkstyleReport = null) {
+    def status = currentBuild.result ?: 'SUCCESS'
+    def emoji = status == 'SUCCESS' ? '✅' : '❌'
+    
+    def reportContent = ""
+    if (checkstyleReport) {
+        reportContent = """
+            
+            📊 RAPPORT CHECKSTYLE:
+            ${checkstyleReport}
+        """
+    }
+    
+    mail(
+        to: recipients,
+        subject: "${emoji} Build ${env.BUILD_NUMBER} - ${status} - (${currentBuild.fullDisplayName})",
+        body: """
+            Statut: ${status}
+            Branche: ${env.BRANCH_NAME}
+            Environnement: ${ENV_NAME}
+            
+            Consultez la console: ${env.BUILD_URL}/console
+            
+            Rapport Checkstyle: ${env.BUILD_URL}artifact/target/site/checkstyle.html
+            Rapport de couverture: ${env.BUILD_URL}/jacoco
+            Rapport SonarQube: http://109.176.198.187:9000${reportContent}
+        """
+    )
 }
