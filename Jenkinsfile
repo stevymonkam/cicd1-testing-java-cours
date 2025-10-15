@@ -187,6 +187,7 @@ def sendEmail(recipients, checkstyleReport = null) {
         body: """
             Statut: ${status}
             Branche: ${env.BRANCH_NAME}
+            echo "Current branch: ${env.BRANCH_NAME}"
             Environnement: ${ENV_NAME}
             
             Consultez la console: ${env.BUILD_URL}/console
