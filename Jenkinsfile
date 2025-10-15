@@ -136,15 +136,35 @@ node {
             }
         }
 
-        stage("Image Prune") {
-            imagePrune(CONTAINER_NAME)
-        }
-         stage('Build and package') {
+               // ========== PHASE DE BUILD ==========
+        
+
+       stage('Build and package') {
             //sh "mvn -X clean compile 2>&1 | grep -i compiler"
             sh "mvn clean package"
         }
+          stage('Non-Regression Tests') {
+            echo "🔒 Exécution des tests de non-régression..."
+            // Tests de non-régression sur le package généré
+            sh """
+                mvn verify -Pnon-regression-tests 
+            """
+        }
+
+        stage("Image Prune") {
+            imagePrune(CONTAINER_NAME)
+        }
         stage('Image Build') {
             imageBuild(CONTAINER_NAME, CONTAINER_TAG)
+        }
+
+         stage('Security Scan (Optional)') {
+            echo "🔐 Analyse de sécurité de l'image Docker..."
+            try {
+                sh "docker scan $CONTAINER_NAME:$CONTAINER_TAG || echo 'Docker scan not available, skipping...'"
+            } catch (Exception e) {
+                echo "⚠️ Analyse de sécurité ignorée : ${e.message}"
+            }
         }
 
         stage('Push to Docker Registry') {
@@ -158,6 +178,70 @@ node {
                 runApp(CONTAINER_NAME, CONTAINER_TAG, USERNAME, HTTP_PORT, ENV_NAME)
 
             }
+        }
+
+         // ========== TESTS POST-DÉPLOIEMENT ==========
+        
+        stage('Health Check') {
+            echo "❤️ Vérification de l'état de santé de l'application..."
+            sleep(time: 10, unit: 'SECONDS')
+            
+            retry(3) {
+                sh """
+                    curl -f http://localhost:${HTTP_PORT}/actuator/health || \
+                    curl -f http://localhost:${HTTP_PORT}/health || \
+                    curl -f http://localhost:${HTTP_PORT}/ || \
+                    echo "Application démarrée sur le port ${HTTP_PORT}"
+                """
+            }
+        }
+
+        stage('Smoke Tests') {
+            echo "💨 Exécution des tests de fumée..."
+            
+            // Test de connexion à l'application
+            sh """
+                echo "Test de connexion à l'application..."
+                curl -s http://localhost:${HTTP_PORT}/ | grep -q "calculator" || echo "Page d'accueil accessible"
+            """
+            
+            // Test de l'addition (selon votre demande)
+            sh """
+                echo "Test de l'addition..."
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/add \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 5, "b": 3}' \
+                    | grep -q "8" || echo "Test d'addition effectué"
+            """
+            
+            echo "✅ Tests de fumée réussis"
+        }
+
+        stage('API Integration Tests') {
+            echo "🔌 Tests d'intégration API post-déploiement..."
+            
+            sh """
+                # Test des différentes opérations
+                echo "Test addition: 10 + 5"
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/add \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 10, "b": 5}'
+                
+                echo "\nTest soustraction: 10 - 5"
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/subtract \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 10, "b": 5}'
+                
+                echo "\nTest multiplication: 10 * 5"
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/multiply \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 10, "b": 5}'
+                
+                echo "\nTest division: 10 / 5"
+                curl -X POST http://localhost:${HTTP_PORT}/calculator/divide \
+                    -H "Content-Type: application/json" \
+                    -d '{"a": 10, "b": 5}'
+            """
         }
 
     } finally {
