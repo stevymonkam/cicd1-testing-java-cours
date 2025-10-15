@@ -77,12 +77,40 @@ node {
             echo "ℹ️ Pipeline continue - Rapport Checkstyle disponible dans les artifacts"
             sendEmail('soniel1693@gmail.com', checkstyleReport, ENV_NAME)
         }
-        stage('Build test') {
-            //sh "mvn -X clean compile 2>&1 | grep -i compiler"
+    
+        stage('Compile') {
+            echo "🔨 Compilation du code source..."
+            sh "mvn clean compile"
+            
+            sh '''
+                echo "Java version par défaut:"
+                java -version
+                echo ""
+            '''
+        }
+
+        stage('Unit Tests') {
+            echo "🧪 Exécution des tests unitaires..."
             sh "mvn test"
         }
 
-        stage('Sonarqube Analysis') {
+          stage('Integration Tests') {
+            echo "🔗 Exécution des tests d'intégration..."
+            sh "mvn verify -DskipUnitTests=true"
+        }
+        stage('Code Coverage Analysis') {
+            echo "📊 Analyse de la couverture de code avec JaCoCo..."
+            sh "mvn jacoco:report"
+            
+            // Publication du rapport de couverture
+            jacoco(
+                execPattern: '**/target/jacoco.exec',
+                classPattern: '**/target/classes',
+                sourcePattern: '**/src/main/java',
+                exclusionPattern: '**/test/**'
+            )
+        }
+        stage('Sonarqube Analysis & Quality Gate') {
              //sh "mvn clean test"
              //sh "mvn clean test -Djacoco.skip=true"
              echo "Current branch: ${env.BRANCH_NAME}"
