@@ -180,7 +180,8 @@ def sendEmail(recipients, checkstyleReport = null) {
             ${checkstyleReport}
         """
     }
-    
+    echo "Current branch: ${env.BRANCH_NAME}"
+
     mail(
         to: recipients,
         subject: "${emoji} Build ${env.BUILD_NUMBER} - ${status} - (${currentBuild.fullDisplayName})",
