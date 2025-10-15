@@ -69,13 +69,13 @@ node {
                 echo "❌ PULL REQUEST BLOQUÉE"
                 echo "📋 Rapport disponible: ${env.BUILD_URL}artifact/target/site/checkstyle.html"
                 
-                sendEmail('soniel1693@gmail.com', checkstyleReport)
+            sendEmail('soniel1693@gmail.com', checkstyleReport, ENV_NAME)
                 
                 error("Pull Request bloquée: ${violations} violations Checkstyle")
             }
             
             echo "ℹ️ Pipeline continue - Rapport Checkstyle disponible dans les artifacts"
-            sendEmail('soniel1693@gmail.com', checkstyleReport)
+            sendEmail('soniel1693@gmail.com', checkstyleReport, ENV_NAME)
         }
         stage('Build test') {
             //sh "mvn -X clean compile 2>&1 | grep -i compiler"
@@ -168,7 +168,7 @@ def runApp(containerName, tag, dockerHubUser, httpPort, envName) {
     echo "Application started on port: ${httpPort} (http)"
 }
 
-def sendEmail(recipients, checkstyleReport = null) {
+def sendEmail(recipients, checkstyleReport = null, envName) {
     def status = currentBuild.result ?: 'SUCCESS'
     def emoji = status == 'SUCCESS' ? '✅' : '❌'
     
@@ -181,7 +181,7 @@ def sendEmail(recipients, checkstyleReport = null) {
         """
     }
     echo "Current branch11: ${env.BRANCH_NAME}"
-    echo "Current branch22: ${ENV_NAME}"
+    echo "Current branch22: ${envName}"
 
 
     mail(
@@ -191,7 +191,7 @@ def sendEmail(recipients, checkstyleReport = null) {
             Statut: ${status}
             Branche: ${env.BRANCH_NAME}
             echo "Current branch: ${env.BRANCH_NAME}"
-            Environnement: ${ENV_NAME}
+            Environnement: ${envName}
             
             Consultez la console: ${env.BUILD_URL}/console
             
