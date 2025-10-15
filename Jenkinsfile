@@ -168,6 +168,36 @@ def runApp(containerName, tag, dockerHubUser, httpPort, envName) {
     echo "Application started on port: ${httpPort} (http)"
 }
 
+def sendEmail(recipients, checkstyleReport = null) {
+    def status = currentBuild.result ?: 'SUCCESS'
+    def emoji = status == 'SUCCESS' ? '✅' : '❌'
+    
+    def reportContent = ""
+    if (checkstyleReport) {
+        reportContent = """
+            
+            📊 RAPPORT CHECKSTYLE:
+            ${checkstyleReport}
+        """
+    }
+    
+    mail(
+        to: recipients,
+        subject: "${emoji} Build ${env.BUILD_NUMBER} - ${status} - (${currentBuild.fullDisplayName})",
+        body: """
+            Statut: ${status}
+            Branche: ${env.BRANCH_NAME}
+            Environnement: ${ENV_NAME}
+            
+            Consultez la console: ${env.BUILD_URL}/console
+            
+            Rapport Checkstyle: ${env.BUILD_URL}artifact/target/site/checkstyle.html
+            Rapport de couverture: ${env.BUILD_URL}/jacoco
+            Rapport SonarQube: http://109.176.198.187:9000${reportContent}
+        """
+    )
+}
+
 /*def sendEmail(recipients) {
     mail(
             to: recipients,
@@ -202,32 +232,3 @@ String getTag(String buildNumber, String branchName) {
 }
 
 
-def sendEmail(recipients, checkstyleReport = null) {
-    def status = currentBuild.result ?: 'SUCCESS'
-    def emoji = status == 'SUCCESS' ? '✅' : '❌'
-    
-    def reportContent = ""
-    if (checkstyleReport) {
-        reportContent = """
-            
-            📊 RAPPORT CHECKSTYLE:
-            ${checkstyleReport}
-        """
-    }
-    
-    mail(
-        to: recipients,
-        subject: "${emoji} Build ${env.BUILD_NUMBER} - ${status} - (${currentBuild.fullDisplayName})",
-        body: """
-            Statut: ${status}
-            Branche: ${env.BRANCH_NAME}
-            Environnement: ${ENV_NAME}
-            
-            Consultez la console: ${env.BUILD_URL}/console
-            
-            Rapport Checkstyle: ${env.BUILD_URL}artifact/target/site/checkstyle.html
-            Rapport de couverture: ${env.BUILD_URL}/jacoco
-            Rapport SonarQube: http://109.176.198.187:9000${reportContent}
-        """
-    )
-}
