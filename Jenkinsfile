@@ -180,8 +180,8 @@ def sendEmail(recipients, checkstyleReport = null) {
             ${checkstyleReport}
         """
     }
-    echo "Current branch: ${env.BRANCH_NAME}"
-    echo "Current branch: ${ENV_NAME}"
+    echo "Current branch11: ${env.BRANCH_NAME}"
+    echo "Current branch22: ${ENV_NAME}"
 
 
     mail(
