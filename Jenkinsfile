@@ -71,14 +71,14 @@ stage('Code Linting') {
                 echo "❌ PULL REQUEST BLOQUÉE"
                 echo "📋 Rapport disponible: ${env.BUILD_URL}artifact/target/site/checkstyle.html"
                 
-                sendEmailcheckstyle('soniel1693@gmail.com', checkstyleReport)
+                sendEmail('soniel1693@gmail.com', checkstyleReport)
                 
                 error("Pull Request bloquée: ${violations} violations Checkstyle")
             }
             
             echo "ℹ️ Pipeline continue - Rapport Checkstyle disponible dans les artifacts"
             
-            sendEmailcheckstyle('soniel1693@gmail.com', checkstyleReport)
+            sendEmail('soniel1693@gmail.com', checkstyleReport)
         }
     }
 }
@@ -139,7 +139,7 @@ stage('Code Linting') {
 
     } finally {
         deleteDir()
-        sendEmail(EMAIL_RECIPIENTS);
+        //sendEmail(EMAIL_RECIPIENTS);
     }
 
 }
@@ -173,12 +173,12 @@ def runApp(containerName, tag, dockerHubUser, httpPort, envName) {
     echo "Application started on port: ${httpPort} (http)"
 }
 
-def sendEmail(recipients) {
+/*def sendEmail(recipients) {
     mail(
             to: recipients,
             subject: "Build ${env.BUILD_NUMBER} - ${currentBuild.currentResult} - (${currentBuild.fullDisplayName})",
             body: "Check console output at: ${env.BUILD_URL}/console" + "\n")
-}
+}*/
 
 String getEnvName(String branchName) {
     if (branchName == 'main') {
@@ -207,7 +207,7 @@ String getTag(String buildNumber, String branchName) {
 }
 
 
-def sendEmailcheckstyle(recipients, checkstyleReport = null) {
+def sendEmail(recipients, checkstyleReport = null) {
     def status = currentBuild.result ?: 'SUCCESS'
     def emoji = status == 'SUCCESS' ? '✅' : '❌'
     
