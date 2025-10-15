@@ -50,10 +50,12 @@ stage('Code Linting') {
             )
             
             sh 'mvn checkstyle:checkstyle || true'
-            
-            archiveArtifacts artifacts: 'target/site/checkstyle.html', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'target/checkstyle-result.xml', allowEmptyArchive: true
-            
+        }
+        
+        archiveArtifacts artifacts: 'target/site/checkstyle.html', allowEmptyArchive: true
+        archiveArtifacts artifacts: 'target/checkstyle-result.xml', allowEmptyArchive: true
+        
+        script {
             def violations = sh(
                 script: "grep -oP '\\d+(?= errors reported)' target/checkstyle-result.xml 2>/dev/null || echo 0",
                 returnStdout: true
@@ -66,6 +68,11 @@ stage('Code Linting') {
                 Rapport HTML: ${env.BUILD_URL}artifact/target/site/checkstyle.html
                 Rapport XML: ${env.BUILD_URL}artifact/target/checkstyle-result.xml
             """
+            
+            def checkstyleStatus = sh(
+                script: 'mvn checkstyle:check',
+                returnStatus: true
+            )
             
             if (env.CHANGE_ID && checkstyleStatus != 0) {
                 echo "❌ PULL REQUEST BLOQUÉE"
