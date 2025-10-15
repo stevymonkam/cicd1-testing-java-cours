@@ -39,9 +39,7 @@ node {
                     '''
         }
 
-stage('Code Linting') {
-    steps {
-        script {
+  stage('Code Linting') {
             echo "🔍 Vérification de la qualité du code avec Checkstyle..."
             
             def checkstyleStatus = sh(
@@ -50,12 +48,10 @@ stage('Code Linting') {
             )
             
             sh 'mvn checkstyle:checkstyle || true'
-        }
-        
-        archiveArtifacts artifacts: 'target/site/checkstyle.html', allowEmptyArchive: true
-        archiveArtifacts artifacts: 'target/checkstyle-result.xml', allowEmptyArchive: true
-        
-        script {
+            
+            archiveArtifacts artifacts: 'target/site/checkstyle.html', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'target/checkstyle-result.xml', allowEmptyArchive: true
+            
             def violations = sh(
                 script: "grep -oP '\\d+(?= errors reported)' target/checkstyle-result.xml 2>/dev/null || echo 0",
                 returnStdout: true
@@ -69,11 +65,6 @@ stage('Code Linting') {
                 Rapport XML: ${env.BUILD_URL}artifact/target/checkstyle-result.xml
             """
             
-            def checkstyleStatus = sh(
-                script: 'mvn checkstyle:check',
-                returnStatus: true
-            )
-            
             if (env.CHANGE_ID && checkstyleStatus != 0) {
                 echo "❌ PULL REQUEST BLOQUÉE"
                 echo "📋 Rapport disponible: ${env.BUILD_URL}artifact/target/site/checkstyle.html"
@@ -84,11 +75,8 @@ stage('Code Linting') {
             }
             
             echo "ℹ️ Pipeline continue - Rapport Checkstyle disponible dans les artifacts"
-            
             sendEmail('soniel1693@gmail.com', checkstyleReport)
         }
-    }
-}
         stage('Build test') {
             //sh "mvn -X clean compile 2>&1 | grep -i compiler"
             sh "mvn test"
