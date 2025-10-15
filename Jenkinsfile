@@ -188,9 +188,9 @@ node {
             
             retry(3) {
                 sh """
-                    curl -f http://localhost:${HTTP_PORT}/actuator/health || \
-                    curl -f http://localhost:${HTTP_PORT}/health || \
-                    curl -f http://localhost:${HTTP_PORT}/ || \
+                    curl -f http://109.176.198.187:${HTTP_PORT}/actuator/health || \
+                    curl -f http://109.176.198.187:${HTTP_PORT}/health || \
+                    curl -f http://109.176.198.187:${HTTP_PORT}/ || \
                     echo "Application démarrée sur le port ${HTTP_PORT}"
                 """
             }
@@ -202,13 +202,13 @@ node {
             // Test de connexion à l'application
             sh """
                 echo "Test de connexion à l'application..."
-                curl -s http://localhost:${HTTP_PORT}/ | grep -q "calculator" || echo "Page d'accueil accessible"
+                curl -s http://109.176.198.187:${HTTP_PORT}/ | grep -q "calculator" || echo "Page d'accueil accessible"
             """
             
             // Test de l'addition (selon votre demande)
             sh """
                 echo "Test de l'addition..."
-                curl -X POST http://localhost:${HTTP_PORT}/calculator/add \
+                curl -X POST http://109.176.198.187:${HTTP_PORT}/calculator/add \
                     -H "Content-Type: application/json" \
                     -d '{"a": 5, "b": 3}' \
                     | grep -q "8" || echo "Test d'addition effectué"
@@ -223,22 +223,22 @@ node {
             sh """
                 # Test des différentes opérations
                 echo "Test addition: 10 + 5"
-                curl -X POST http://localhost:${HTTP_PORT}/calculator/add \
+                curl -X POST http://109.176.198.187:${HTTP_PORT}/calculator/add \
                     -H "Content-Type: application/json" \
                     -d '{"a": 10, "b": 5}'
                 
                 echo "\nTest soustraction: 10 - 5"
-                curl -X POST http://localhost:${HTTP_PORT}/calculator/subtract \
+                curl -X POST http://109.176.198.187:${HTTP_PORT}/calculator/subtract \
                     -H "Content-Type: application/json" \
                     -d '{"a": 10, "b": 5}'
                 
                 echo "\nTest multiplication: 10 * 5"
-                curl -X POST http://localhost:${HTTP_PORT}/calculator/multiply \
+                curl -X POST http://109.176.198.187:${HTTP_PORT}/calculator/multiply \
                     -H "Content-Type: application/json" \
                     -d '{"a": 10, "b": 5}'
                 
                 echo "\nTest division: 10 / 5"
-                curl -X POST http://localhost:${HTTP_PORT}/calculator/divide \
+                curl -X POST http://109.176.198.187:${HTTP_PORT}/calculator/divide \
                     -H "Content-Type: application/json" \
                     -d '{"a": 10, "b": 5}'
             """
