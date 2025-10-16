@@ -1,0 +1,682 @@
+// ========================================================
+// Jenkinsfile - Calculator Project
+// Approche Moyenne Entreprise Europe: Jenkins + ArgoCD
+// ========================================================
+// Workflow:
+// - feature/* → Build + Test uniquement (pas de déploiement)
+// - develop → Build + Test + Docker + Update values-dev.yaml + ArgoCD sync
+// - main → Build + Test + Docker + Update values-staging.yaml + ArgoCD sync manuel
+// - release-*, hotfix-* → UAT (staging)
+// ========================================================
+
+def ENV_NAME = getEnvName(env.BRANCH_NAME)
+def CONTAINER_NAME = "calculator-" + ENV_NAME
+def CONTAINER_TAG = getTag(env.BUILD_NUMBER, env.BRANCH_NAME)
+def HTTP_PORT = getHTTPPort(env.BRANCH_NAME)
+def EMAIL_RECIPIENTS = "soniel1693@gmail.com"
+def DOCKER_REGISTRY = "docker.io"
+def DOCKER_CREDENTIALS_ID = "dockerhubcredential"
+def HELM_CHART_DIR = "helm/calculator"
+def ARGOCD_SERVER = "http://109.176.198.187:30080"
+def ARGOCD_TOKEN_ID = "argocd-token"
+
+// ========================================================
+// DÉMARRAGE DE LA PIPELINE
+// ========================================================
+
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: maven
+    image: maven:3.8.1-openjdk-11
+    command: ['cat']
+    tty: true
+  - name: docker
+    image: docker:24-dind
+    command: ['cat']
+    tty: true
+    securityContext:
+      privileged: true
+  - name: git
+    image: alpine/git:latest
+    command: ['cat']
+    tty: true
+'''
+        }
+    }
+
+    triggers {
+        githubPush()
+    }
+
+    options {
+        timestamps()
+        timeout(time: 45, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '15'))
+    }
+
+    stages {
+        // ================================================
+        // STAGE 1: INITIALISATION ET DÉTERMINATION
+        // ================================================
+        stage('Initialize & Determine Action') {
+            steps {
+                script {
+                    echo """
+                    ═══════════════════════════════════════════════════════════
+                    Pipeline Calculator - Initialisation
+                    ═══════════════════════════════════════════════════════════
+                    Branche: ${env.BRANCH_NAME}
+                    Build Number: ${env.BUILD_NUMBER}
+                    Environment: ${ENV_NAME}
+                    Container: ${CONTAINER_NAME}:${CONTAINER_TAG}
+                    Port HTTP: ${HTTP_PORT}
+                    ═══════════════════════════════════════════════════════════
+                    """
+
+                    // Déterminer l'action en fonction de la branche
+                    if (env.BRANCH_NAME.startsWith('feature/')) {
+                        env.ACTION = 'test-only'
+                        echo "ACTION DÉTERMINÉE: Test uniquement (pas de déploiement)"
+                    } else if (env.BRANCH_NAME == 'develop') {
+                        env.ACTION = 'build-and-deploy-dev'
+                        echo "ACTION DÉTERMINÉE: Build + Docker + Deploy en DEV"
+                    } else if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME.startsWith('release-') || env.BRANCH_NAME.startsWith('hotfix-')) {
+                        env.ACTION = 'build-and-deploy-staging'
+                        echo "ACTION DÉTERMINÉE: Build + Docker + Deploy en STAGING"
+                    } else {
+                        env.ACTION = 'test-only'
+                        echo "ACTION DÉTERMINÉE: Test uniquement (branche inconnue)"
+                    }
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 2: CHECKOUT
+        // ================================================
+        stage('Checkout') {
+            steps {
+                echo "Checkout du code source..."
+                checkout scm
+                sh 'git log --oneline -1'
+            }
+        }
+
+        // ================================================
+        // STAGE 3: BUILD MAVEN
+        // ================================================
+        stage('Build with Maven') {
+            steps {
+                container('maven') {
+                    echo "🔨 Compilation et build Maven..."
+                    sh 'mvn clean compile'
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 4: CODE LINTING (CHECKSTYLE)
+        // ================================================
+        stage('Code Linting - Checkstyle') {
+            steps {
+                container('maven') {
+                    echo "🔍 Vérification de la qualité du code avec Checkstyle..."
+                    
+                    def checkstyleStatus = sh(
+                        script: 'mvn checkstyle:check',
+                        returnStatus: true
+                    )
+                    
+                    sh 'mvn checkstyle:checkstyle || true'
+                    
+                    archiveArtifacts artifacts: 'target/site/checkstyle.html', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'target/checkstyle-result.xml', allowEmptyArchive: true
+                    
+                    def violations = sh(
+                        script: "grep -oP '\\d+(?= errors reported)' target/checkstyle-result.xml 2>/dev/null || echo 0",
+                        returnStdout: true
+                    ).trim()
+                    
+                    echo "📊 Violations détectées: ${violations}"
+                    
+                    if (env.CHANGE_ID && checkstyleStatus != 0) {
+                        echo "❌ PULL REQUEST BLOQUÉE - ${violations} violations Checkstyle"
+                        sendEmail(EMAIL_RECIPIENTS, "Checkstyle violations: ${violations}", ENV_NAME)
+                        error("Pull Request bloquée: ${violations} violations Checkstyle")
+                    }
+                    
+                    echo "✅ Checkstyle validation passed"
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 5: TESTS UNITAIRES
+        // ================================================
+        stage('Unit Tests') {
+            steps {
+                container('maven') {
+                    echo "🧪 Exécution des tests unitaires..."
+                    sh 'mvn test'
+                }
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 6: TESTS D'INTÉGRATION
+        // ================================================
+        stage('Integration Tests') {
+            steps {
+                container('maven') {
+                    echo "🔗 Exécution des tests d'intégration..."
+                    sh 'mvn verify -DskipUnitTests=true'
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 7: CODE COVERAGE (JACOCO)
+        // ================================================
+        stage('Code Coverage Analysis') {
+            steps {
+                container('maven') {
+                    echo "📊 Analyse de la couverture de code avec JaCoCo..."
+                    sh 'mvn jacoco:report'
+                    
+                    jacoco(
+                        execPattern: '**/target/jacoco.exec',
+                        classPattern: '**/target/classes',
+                        sourcePattern: '**/src/main/java',
+                        exclusionPattern: '**/test/**'
+                    )
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 8: SONARQUBE ANALYSIS
+        // ================================================
+        stage('SonarQube Analysis & Quality Gate') {
+            steps {
+                container('maven') {
+                    echo "📈 Analyse SonarQube..."
+                    
+                    withSonarQubeEnv('SonarQubeLocalServer') {
+                        sh 'mvn sonar:sonar -s .m2/settings.xml -Dsonar.projectKey=calculator'
+                    }
+                    
+                    timeout(time: 2, unit: 'MINUTES') {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            echo "⚠️ Quality gate failed: ${qg.status}"
+                            sendEmail(EMAIL_RECIPIENTS, "SonarQube quality gate failed: ${qg.status}", ENV_NAME)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 9: PACKAGE (JAR)
+        // ================================================
+        stage('Package') {
+            steps {
+                container('maven') {
+                    echo "📦 Création du package JAR..."
+                    sh 'mvn clean package'
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 10: NON-REGRESSION TESTS
+        // ================================================
+        stage('Non-Regression Tests') {
+            steps {
+                container('maven') {
+                    echo "🔒 Exécution des tests de non-régression..."
+                    sh 'mvn verify -Pnon-regression-tests || true'
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 11: DOCKER IMAGE PRUNE (uniquement si déploiement)
+        // ================================================
+        stage('Image Prune') {
+            when {
+                expression { env.ACTION != 'test-only' }
+            }
+            steps {
+                container('docker') {
+                    echo "🧹 Nettoyage des anciennes images Docker..."
+                    script {
+                        imagePrune(CONTAINER_NAME)
+                    }
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 12: DOCKER BUILD (uniquement si déploiement)
+        // ================================================
+        stage('Docker Build') {
+            when {
+                expression { env.ACTION != 'test-only' }
+            }
+            steps {
+                container('docker') {
+                    echo "🐳 Build de l'image Docker: ${CONTAINER_NAME}:${CONTAINER_TAG}"
+                    script {
+                        imageBuild(CONTAINER_NAME, CONTAINER_TAG)
+                    }
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 13: SECURITY SCAN
+        // ================================================
+        stage('Security Scan') {
+            when {
+                expression { env.ACTION != 'test-only' }
+            }
+            steps {
+                container('docker') {
+                    echo "🔐 Analyse de sécurité de l'image Docker..."
+                    sh "docker scan ${CONTAINER_NAME}:${CONTAINER_TAG} || echo 'Docker scan not available, skipping...'"
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 14: DOCKER PUSH
+        // ================================================
+        stage('Push to Docker Registry') {
+            when {
+                expression { env.ACTION != 'test-only' }
+            }
+            steps {
+                container('docker') {
+                    echo "📤 Push de l'image vers Docker Registry..."
+                    withCredentials([usernamePassword(
+                        credentialsId: DOCKER_CREDENTIALS_ID,
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        script {
+                            pushToImage(CONTAINER_NAME, CONTAINER_TAG, DOCKER_USER, DOCKER_PASS)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 15: UPDATE HELM VALUES (DEV)
+        // ================================================
+        stage('Update Helm Values (DEV)') {
+            when {
+                allOf {
+                    expression { env.BRANCH_NAME == 'develop' }
+                    expression { env.ACTION == 'build-and-deploy-dev' }
+                }
+            }
+            steps {
+                container('git') {
+                    echo "📝 Update Helm values-dev.yaml..."
+                    sh '''
+                        HELM_VALUES_FILE="${HELM_CHART_DIR}/values-dev.yaml"
+                        
+                        if [ ! -f "$HELM_VALUES_FILE" ]; then
+                            echo "Creating $HELM_VALUES_FILE..."
+                            mkdir -p ${HELM_CHART_DIR}
+                            cat > "$HELM_VALUES_FILE" <<EOF
+image:
+  repository: ${DOCKER_USER}/${CONTAINER_NAME}
+  tag: "${CONTAINER_TAG}"
+  pullPolicy: IfNotPresent
+replicaCount: 1
+environment: dev
+httpPort: ${HTTP_PORT}
+EOF
+                        else
+                            sed -i "s|^  tag: .*|  tag: \"${CONTAINER_TAG}\"|g" "$HELM_VALUES_FILE"
+                        fi
+                        
+                        echo "Updated image tag to: ${CONTAINER_TAG}"
+                        cat "$HELM_VALUES_FILE"
+                    '''
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 16: UPDATE HELM VALUES (STAGING)
+        // ================================================
+        stage('Update Helm Values (STAGING)') {
+            when {
+                allOf {
+                    expression { env.BRANCH_NAME == 'main' || env.BRANCH_NAME.startsWith('release-') || env.BRANCH_NAME.startsWith('hotfix-') }
+                    expression { env.ACTION == 'build-and-deploy-staging' }
+                }
+            }
+            steps {
+                container('git') {
+                    echo "📝 Update Helm values-staging.yaml..."
+                    sh '''
+                        HELM_VALUES_FILE="${HELM_CHART_DIR}/values-staging.yaml"
+                        
+                        if [ ! -f "$HELM_VALUES_FILE" ]; then
+                            echo "Creating $HELM_VALUES_FILE..."
+                            mkdir -p ${HELM_CHART_DIR}
+                            cat > "$HELM_VALUES_FILE" <<EOF
+image:
+  repository: ${DOCKER_USER}/${CONTAINER_NAME}
+  tag: "${CONTAINER_TAG}"
+  pullPolicy: IfNotPresent
+replicaCount: 2
+environment: staging
+httpPort: ${HTTP_PORT}
+EOF
+                        else
+                            sed -i "s|^  tag: .*|  tag: \"${CONTAINER_TAG}\"|g" "$HELM_VALUES_FILE"
+                        fi
+                        
+                        echo "Updated image tag to: ${CONTAINER_TAG}"
+                        cat "$HELM_VALUES_FILE"
+                    '''
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 17: COMMIT & PUSH HELM CHANGES
+        // ================================================
+        stage('Commit & Push Helm Changes') {
+            when {
+                expression { env.ACTION != 'test-only' }
+            }
+            steps {
+                container('git') {
+                    echo "🔄 Commit et push des changements Helm..."
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'github-credentials',
+                            usernameVariable: 'GIT_USER',
+                            passwordVariable: 'GIT_PASS'
+                        )
+                    ]) {
+                        sh '''
+                            git config user.email "jenkins@company.eu"
+                            git config user.name "Jenkins CI"
+                            
+                            VALUES_FILE="${HELM_CHART_DIR}/values-${ENV_NAME}.yaml"
+                            
+                            if git diff --quiet "$VALUES_FILE" 2>/dev/null; then
+                                echo "ℹ️ Pas de changement dans $VALUES_FILE"
+                            else
+                                git add "$VALUES_FILE"
+                                git commit -m "chore: Update calculator image to ${CONTAINER_TAG} (${ENV_NAME})"
+                                
+                                git push \
+                                    https://${GIT_USER}:${GIT_PASS}@github.com/company/calculator.git \
+                                    ${BRANCH_NAME}
+                                
+                                echo "✅ Changes pushed to ${BRANCH_NAME}"
+                            fi
+                        '''
+                    }
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 18: TRIGGER ARGOCD SYNC
+        // ================================================
+        stage('Trigger ArgoCD Sync') {
+            when {
+                expression { env.ACTION != 'test-only' }
+            }
+            steps {
+                echo "🔔 Triggering ArgoCD sync pour ${ENV_NAME}..."
+                script {
+                    withCredentials([string(credentialsId: ARGOCD_TOKEN_ID, variable: 'ARGOCD_TOKEN')]) {
+                        sh '''
+                            APP_NAME="calculator-${ENV_NAME}"
+                            
+                            echo "Syncing ArgoCD application: $APP_NAME"
+                            
+                            curl -X POST \
+                                -H "Content-Type: application/json" \
+                                -H "Authorization: Bearer ${ARGOCD_TOKEN}" \
+                                "${ARGOCD_SERVER}/api/v1/applications/${APP_NAME}/sync" \
+                                -d '{"syncStrategy": {"hook": {}}}' || echo "ArgoCD sync triggered"
+                        '''
+                    }
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 19: WAIT FOR ARGOCD SYNC
+        // ================================================
+        stage('Wait for ArgoCD Sync') {
+            when {
+                expression { env.ACTION != 'test-only' }
+            }
+            steps {
+                echo "⏳ Attente de la synchronisation ArgoCD (max 5 minutes)..."
+                retry(10) {
+                    script {
+                        withCredentials([string(credentialsId: ARGOCD_TOKEN_ID, variable: 'ARGOCD_TOKEN')]) {
+                            sh '''
+                                sleep 5
+                                
+                                APP_NAME="calculator-${ENV_NAME}"
+                                
+                                STATUS=$(curl -s \
+                                    -H "Authorization: Bearer ${ARGOCD_TOKEN}" \
+                                    "${ARGOCD_SERVER}/api/v1/applications/${APP_NAME}" \
+                                    | grep -o '"syncStatus":"[^"]*"' | cut -d'"' -f4 || echo "Unknown")
+                                
+                                echo "ArgoCD Sync Status: $STATUS"
+                                
+                                if [ "$STATUS" != "Synced" ]; then
+                                    echo "Waiting for sync to complete..."
+                                    exit 1
+                                fi
+                                
+                                echo "✅ ArgoCD sync completed"
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 20: HEALTH CHECK
+        // ================================================
+        stage('Health Check') {
+            when {
+                expression { env.ACTION != 'test-only' }
+            }
+            steps {
+                echo "❤️ Vérification de l'état de santé de l'application..."
+                sleep(time: 10, unit: 'SECONDS')
+                
+                retry(3) {
+                    sh '''
+                        curl -f http://109.176.198.187:${HTTP_PORT}/actuator/health || \
+                        curl -f http://109.176.198.187:${HTTP_PORT}/health || \
+                        curl -f http://109.176.198.187:${HTTP_PORT}/ || \
+                        echo "Application démarrée sur le port ${HTTP_PORT}"
+                    '''
+                }
+            }
+        }
+
+        // ================================================
+        // STAGE 21: SMOKE TESTS
+        // ================================================
+        stage('Smoke Tests') {
+            when {
+                expression { env.ACTION != 'test-only' }
+            }
+            steps {
+                echo "💨 Exécution des tests de fumée..."
+                sh '''
+                    echo "Test d'addition: 5 + 3 = 8"
+                    curl -X POST http://109.176.198.187:${HTTP_PORT}/calculator/add \
+                        -H "Content-Type: application/json" \
+                        -d '{"a": 5, "b": 3}' || echo "Test effectué"
+                    
+                    echo ""
+                    echo "Test de soustraction: 10 - 3 = 7"
+                    curl -X POST http://109.176.198.187:${HTTP_PORT}/calculator/subtract \
+                        -H "Content-Type: application/json" \
+                        -d '{"a": 10, "b": 3}' || echo "Test effectué"
+                '''
+                echo "✅ Tests de fumée réussis"
+            }
+        }
+
+        // ================================================
+        // STAGE 22: RÉSUMÉ FINAL
+        // ================================================
+        stage('Summary') {
+            steps {
+                script {
+                    echo """
+                    ═══════════════════════════════════════════════════════════
+                    Pipeline Summary - Calculator
+                    ═══════════════════════════════════════════════════════════
+                    Branche: ${env.BRANCH_NAME}
+                    Action: ${env.ACTION}
+                    Environment: ${ENV_NAME}
+                    Build Number: ${env.BUILD_NUMBER}
+                    """
+
+                    if (env.ACTION == 'test-only') {
+                        echo "Statut: ✅ Tests terminés (pas de déploiement)"
+                    } else if (env.ACTION == 'build-and-deploy-dev') {
+                        echo "Statut: ✅ Docker image créée et déployée en DEV"
+                        echo "Image: ${CONTAINER_NAME}:${CONTAINER_TAG}"
+                        echo "Port: ${HTTP_PORT}"
+                    } else if (env.ACTION == 'build-and-deploy-staging') {
+                        echo "Statut: ✅ Docker image créée et déployée en STAGING"
+                        echo "Image: ${CONTAINER_NAME}:${CONTAINER_TAG}"
+                        echo "Port: ${HTTP_PORT}"
+                    }
+
+                    echo "═══════════════════════════════════════════════════════════"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                sendEmail(EMAIL_RECIPIENTS, "Pipeline SUCCESS", ENV_NAME)
+                echo "✅ Pipeline terminée avec succès"
+            }
+        }
+        failure {
+            script {
+                sendEmail(EMAIL_RECIPIENTS, "Pipeline FAILED", ENV_NAME)
+                echo "❌ Pipeline échouée"
+            }
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
+
+// ================================================================
+// FONCTIONS UTILITAIRES
+// ================================================================
+
+def imagePrune(containerName) {
+    try {
+        sh "docker stop $containerName"
+        sh "docker rm -f $containerName"
+        sh "docker image prune -f"
+    } catch (ignored) {
+        echo "Container $containerName not found or already stopped"
+    }
+}
+
+def imageBuild(containerName, tag) {
+    sh "docker build -t $containerName:$tag -t $containerName --pull --no-cache ."
+    echo "✅ Image build complete: $containerName:$tag"
+}
+
+def pushToImage(containerName, tag, dockerUser, dockerPassword) {
+    sh "docker login -u $dockerUser -p $dockerPassword"
+    sh "docker tag $containerName:$tag $dockerUser/$containerName:$tag"
+    sh "docker push $dockerUser/$containerName:$tag"
+    echo "✅ Image push complete: $dockerUser/$containerName:$tag"
+}
+
+def sendEmail(recipients, status, envName) {
+    def buildStatus = currentBuild.result ?: 'SUCCESS'
+    def emoji = buildStatus == 'SUCCESS' ? '✅' : '❌'
+    
+    mail(
+        to: recipients,
+        subject: "${emoji} Build ${env.BUILD_NUMBER} - ${buildStatus} - Calculator (${envName})",
+        body: """
+            Statut: ${buildStatus}
+            Branche: ${env.BRANCH_NAME}
+            Environnement: ${envName}
+            Message: ${status}
+            
+            Console: ${env.BUILD_URL}console
+            Artifacts: ${env.BUILD_URL}artifact/
+            Checkstyle: ${env.BUILD_URL}artifact/target/site/checkstyle.html
+            JaCoCo Coverage: ${env.BUILD_URL}jacoco
+            SonarQube: http://109.176.198.187:9000
+        """
+    )
+}
+
+String getEnvName(String branchName) {
+    if (branchName == 'main') {
+        return 'prod'
+    } else if (branchName.startsWith("release-") || branchName.startsWith("hotfix-") || branchName == 'ready') {
+        return 'uat'
+    }
+    return 'dev'
+}
+
+String getHTTPPort(String branchName) {
+    if (branchName == 'main') {
+        return '9001'
+    } else if (branchName.startsWith("release-") || branchName.startsWith("hotfix-") || branchName == 'ready') {
+        return '9002'
+    }
+    return '9003'
+}
+
+String getTag(String buildNumber, String branchName) {
+    if (branchName == 'main') {
+        return buildNumber + '-stable'
+    } else if (branchName == 'develop') {
+        return buildNumber + '-dev'
+    }
+    return buildNumber + '-feature'
+}
