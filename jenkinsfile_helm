@@ -12,7 +12,7 @@
 def ENV_NAME = getEnvName(env.BRANCH_NAME)
 def CONTAINER_NAME = "calculator-" + ENV_NAME
 def CONTAINER_TAG = getTag(env.BUILD_NUMBER, env.BRANCH_NAME)
-def HTTP_PORT = getHTTPPort(env.BRANCH_NAME)
+def HTTP_PORT = getHTTPPort(env.BRANCH_NAME)  // avec kubernetes je doit aller dans la fonctione chager les port pour mettre celui des nodeports
 def EMAIL_RECIPIENTS = "soniel1693@gmail.com"
 def DOCKER_REGISTRY = "docker.io"
 def DOCKER_CREDENTIALS_ID = "dockerhubcredential"
