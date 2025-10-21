@@ -134,7 +134,7 @@ kubectl apply -f argocd-repo-server-metrics.yaml
 ### Création du dashboard ArgoCD dans Grafana
 
 1. Aller dans **New Dashboard → Import**
-2. Coller le code JSON du dashboard ArgoCD (voir le fichier JSON complet dans la documentation)
+2. Coller le code JSON du dashboard ArgoCD (voir le fichier JSON complet dans dashbord.json dans le dossier doc-de-tous-les-project)
 
 Le dashboard inclut les sections suivantes :
 - **Overview** : Vue d'ensemble avec uptime, clusters, applications, repositories
