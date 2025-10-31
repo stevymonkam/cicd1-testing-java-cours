@@ -4,4 +4,4 @@ env:
   SPRING_DATASOURCE_PASSWORD: dev-secret
   SPRING_PROFILES_ACTIVE: dev
 image:
-  tag: "dev"
+  tag: "2-stable"
