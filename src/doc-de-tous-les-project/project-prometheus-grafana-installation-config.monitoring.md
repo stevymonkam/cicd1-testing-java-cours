@@ -1,5 +1,7 @@
 # Installation de Helm, Prometheus et Grafana pour le monitoring d'ArgoCD
 
+featur/helm
+
 ## Installation de Helm
 
 Avant d'installer Prometheus, il faut d'abord installer Helm :
@@ -158,3 +160,6 @@ Le dashboard inclut les sections suivantes :
 - ArgoCD expose nativement les métriques à travers son API
 - Les ServiceMonitors détectent automatiquement les services qui exposent des métriques
 - Le label `release: prometheus` est nécessaire pour que Prometheus détecte les ServiceMonitors
+
+
+INSTALLATION DE PROMETHEUS SANS HELM : TU VAS JUSTE DANS LE DOSSIER PROMETHEUS-TRAINING ET TU FAIT LES KUBECTL APPLY TOUT EST DEJA CONFIGURE SI TU VEUX MONITORE ARGOCD TU FAIT JUSTE LES KUBECTL SUR LES YAML DES METRIC QUI SONT DANS GIT TU NE CHANGE RIEN : POUR INSTALLER GRAFANA C EST AVEC HELM VOIR CE QUI S'EST PASSER PRECEDENMENT
