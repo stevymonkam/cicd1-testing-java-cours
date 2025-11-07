@@ -1,6 +1,6 @@
 # Installation de Helm, Prometheus et Grafana pour le monitoring d'ArgoCD
 
-featur/helm
+
 
 ## Installation de Helm
 
